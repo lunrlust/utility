@@ -67,7 +67,7 @@ npm install -g lunrlust
 
 ### Option 2: Manual Installation
 ```bash
-git clone https://github.com/yourusername/lunrlust.git
+git clone https://github.com/lunrlust/utility.git
 cd lunrlust
 npm install
 npm link
