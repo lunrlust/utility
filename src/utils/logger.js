@@ -5,7 +5,14 @@ import os from 'os';
 
 const logDir = path.join(os.homedir(), '.lunrlust', 'logs');
 
+let logger = null;
+
 export function initLogger() {
+  // Only initialize once
+  if (logger) {
+    return logger;
+  }
+
   // Create log directory if it doesn't exist
   fs.ensureDirSync(logDir);
 
@@ -14,8 +21,8 @@ export function initLogger() {
   const logFilePath = path.join(logDir, `lunrlust-${timestamp}.log`);
 
   // Configure winston logger
-  const logger = winston.createLogger({
-    level: 'info',
+  logger = winston.createLogger({
+    level: process.env.NODE_ENV === 'production' ? 'warn' : 'info',
     format: winston.format.combine(
       winston.format.timestamp(),
       winston.format.json()
@@ -42,15 +49,13 @@ export function initLogger() {
         winston.format.colorize(),
         winston.format.simple()
       ),
-      level: 'debug'
+      level: 'warn' // Only show warnings and errors in console
     }));
   }
-
-  logger.info('Logger initialized');
   
   return logger;
 }
 
 export function getLogger() {
-  return winston.loggers.get('default');
+  return logger || initLogger();
 }

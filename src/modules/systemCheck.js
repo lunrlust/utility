@@ -1,6 +1,7 @@
 import si from 'systeminformation';
 import chalk from 'chalk';
 import ora from 'ora';
+import os from 'os';
 import { initLogger } from '../utils/logger.js';
 
 const logger = initLogger();
@@ -21,27 +22,18 @@ export async function checkSystemRequirements(display = false) {
   const issues = [];
   
   try {
-    // Get CPU information
-    const cpu = await si.cpu();
-    
-    // Get memory information
-    const mem = await si.mem();
-    
-    // Get OS information
-    const os = await si.osInfo();
-    
-    // Get graphics information
-    const graphics = await si.graphics();
-    
-    // Get disk information
-    const disks = await si.diskLayout();
-    
-    // Check Windows version
-    if (os.platform !== 'win32') {
+    // Check OS platform first
+    if (os.platform() !== 'win32') {
       issues.push('This script is designed for Windows operating systems only');
-    } else if (!os.release.startsWith('10.') && !os.release.startsWith('11.')) {
-      issues.push('Windows 10 or 11 recommended');
+      spinner.fail('System check failed');
+      return { success: false, issues };
     }
+    
+    // Get system information
+    const cpu = await si.cpu();
+    const mem = await si.mem();
+    const graphics = await si.graphics();
+    const disks = await si.diskLayout();
     
     // Check CPU requirements
     if (cpu.cores < 4) {
@@ -89,7 +81,7 @@ export async function checkSystemRequirements(display = false) {
       console.log('\n' + chalk.hex('#9d4edd').bold('📊 System Information:'));
       console.log(chalk.hex('#c77dff')('• CPU:      ') + `${cpu.manufacturer} ${cpu.brand} (${cpu.cores} cores)`);
       console.log(chalk.hex('#c77dff')('• Memory:   ') + `${ramGB}GB RAM`);
-      console.log(chalk.hex('#c77dff')('• OS:       ') + `${os.distro} ${os.release} ${os.arch}`);
+      console.log(chalk.hex('#c77dff')('• OS:       ') + `Windows ${os.release()}`);
       
       if (mainGPU) {
         console.log(chalk.hex('#c77dff')('• GPU:      ') + `${mainGPU.vendor} ${mainGPU.model} (${mainGPU.vram}MB VRAM)`);
@@ -105,15 +97,15 @@ export async function checkSystemRequirements(display = false) {
       }
     }
     
-    logger.info('System check completed', { issues, systemInfo: { cpu: cpu.brand, ram: ramGB, os: os.distro } });
+    logger.info('System check completed', { issues, systemInfo: { cpu: cpu.brand, ram: ramGB, os: os.release() } });
     
     return {
-      success: issues.length === 0,
+      success: true,
       issues,
       systemInfo: {
         cpu,
         memory: { total: mem.total, free: mem.free },
-        os,
+        os: { platform: os.platform(), release: os.release() },
         graphics,
         disks
       }

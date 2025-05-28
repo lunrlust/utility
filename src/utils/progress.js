@@ -3,9 +3,9 @@ import chalk from 'chalk';
 
 // Create a custom progress bar theme with violet colors
 const progressBarTheme = {
-  format: `${chalk.hex('#5a189a').bold('{bar}')} ${chalk.hex('#9d4edd')('{percentage}%')} | ${chalk.hex('#c77dff')('Speed:')} {speed} | ${chalk.hex('#e0aaff')('ETA:')} {eta}s | {value}/{total} MB`,
-  barCompleteChar: '\u2588',
-  barIncompleteChar: '\u2591',
+  format: `${chalk.hex('#5a189a').bold('{bar}')} ${chalk.hex('#9d4edd')('{percentage}%')} | ${chalk.hex('#c77dff')('Speed:')} {speed} MB/s | ${chalk.hex('#e0aaff')('ETA:')} {eta}s | {value}/{total} MB`,
+  barCompleteChar: '█',
+  barIncompleteChar: '░',
   hideCursor: true
 };
 
@@ -13,7 +13,10 @@ const progressBarTheme = {
 const multiBar = new cliProgress.MultiBar({
   clearOnComplete: false,
   hideCursor: true,
-  format: progressBarTheme.format
+  format: progressBarTheme.format,
+  barsize: 30,
+  stopOnComplete: true,
+  forceRedraw: true
 }, cliProgress.Presets.shades_classic);
 
 /**
@@ -32,6 +35,8 @@ export function createProgressBar(task, totalSize) {
   
   // Store start time to calculate speed
   bar.start = Date.now();
+  bar.lastUpdate = Date.now();
+  bar.lastValue = 0;
   
   return bar;
 }
@@ -42,11 +47,20 @@ export function createProgressBar(task, totalSize) {
  * @param {number} value - Current progress value
  */
 export function updateProgress(bar, value) {
-  // Calculate speed in MB/s
-  const elapsedTime = (Date.now() - bar.start) / 1000; // seconds
-  const speed = elapsedTime > 0 ? (value / elapsedTime).toFixed(2) + ' MB/s' : 'N/A';
+  const now = Date.now();
+  const timeDiff = (now - bar.lastUpdate) / 1000; // seconds
+  const valueDiff = value - bar.lastValue;
+  
+  // Calculate speed (only update if enough time has passed)
+  let speed = "N/A";
+  if (timeDiff >= 0.1) { // Update speed every 100ms
+    speed = (valueDiff / timeDiff).toFixed(2);
+    bar.lastUpdate = now;
+    bar.lastValue = value;
+  }
   
   // Calculate ETA
+  const elapsedTime = (now - bar.start) / 1000; // seconds
   const eta = elapsedTime > 0 ? ((bar.total - value) / (value / elapsedTime)).toFixed(0) : 'N/A';
   
   bar.update(value, {
@@ -67,7 +81,10 @@ export function stopAllProgress() {
  * @param {object} bar - Progress bar instance
  */
 export function completeProgress(bar) {
-  bar.update(bar.total);
+  bar.update(bar.total, {
+    speed: "Done",
+    eta: "0"
+  });
   
   // Optional: Add some separation after the bar completes
   console.log('');
