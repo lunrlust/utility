@@ -67,6 +67,7 @@ npm install -g lunrlust
 
 ### Option 2: Manual Installation
 ```bash
+winget install --id Git.Git -e --source winget
 git clone https://github.com/lunrlust/utility.git
 cd utility
 npm install
